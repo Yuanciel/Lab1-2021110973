@@ -10,6 +10,8 @@ lastone = None
 random = random.Random()
 import re
 import networkx as nx
+import threading
+import time
 
 directed_graph = nx.DiGraph()
 last_one = None  # Change variable name to follow PEP8 naming conventions
@@ -49,34 +51,63 @@ def add_edge_with_weight(from_node, to_node):
             directed_graph.add_edge(from_node, to_node, weight=1)
 
 
-def randomWalk():
-    if not directed_graph:
+
+# 用于检测用户输入的线程
+def check_user_input(stop_event):
+    input("Press Enter to stop the random walk...")
+    stop_event.set()
+
+def randomWalk(delay=1):
+    if not directed_graph or len(directed_graph.nodes) == 0:
         return "Graph is empty."
 
-    visited_nodes = []  #存已经访问的节点和边
-    visited_edges = []
+    visited_nodes = []  # 存储已经访问的节点
+    visited_edges = set()  # 使用集合来存储已经访问的边，确保边不重复
     current_node = random.choice(list(directed_graph.nodes))
+    interrupted_by_user = False  # 标志位，表示是否被用户打断
 
-    while True:
-        visited_nodes.append(current_node)
-        neighbors = list(directed_graph.neighbors(current_node))
-        if not neighbors:
-            break
+    # 事件用于标记是否用户请求停止
+    stop_event = threading.Event()
+    input_thread = threading.Thread(target=check_user_input, args=(stop_event,))
+    input_thread.start()
 
-        next_node = random.choice(neighbors)
-        visited_edges.append((current_node, next_node))
+    try:
+        while True:
+            visited_nodes.append(current_node)
+            neighbors = list(directed_graph.neighbors(current_node))
 
-        if next_node in visited_nodes:
-            break
+            # 过滤掉已经访问过的边
+            unvisited_neighbors = [n for n in neighbors if (current_node, n) not in visited_edges]
+            if not unvisited_neighbors:
+                break
 
-        current_node = next_node
+            next_node = random.choice(unvisited_neighbors)
+            visited_edges.add((current_node, next_node))
 
-    result = "Visited Nodes:\n"
-    for node in visited_nodes:
-        result += f"- {node}\n"
+            current_node = next_node
 
-    with open("random_walk_output.txt", "w") as file:
-        file.write(result)
+            # 加入延迟
+            time.sleep(delay)
+
+            # 检查用户是否打断游走
+            if threading.main_thread().is_alive() and not interrupted_by_user:
+                continue  # 继续下一次迭代
+            else:
+                break  # 用户打断或者遍历完所有节点，退出循环
+    except KeyboardInterrupt:
+        interrupted_by_user = True
+    finally:
+        if interrupted_by_user:
+            visited_nodes.append("(Interrupted by user)")
+        else:
+            visited_nodes.append("(Finished without interruption)")
+
+        result = "Visited Nodes:\n"
+        for node in visited_nodes:
+            result += f"- {node}\n"
+
+        with open("random_walk_output.txt", "w") as file:
+            file.write(result)
 
     return result
 
