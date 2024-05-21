@@ -91,10 +91,10 @@ def randomWalk(delay=1):
             time.sleep(delay)
 
             # 检查用户是否打断游走
-            if threading.main_thread().is_alive() and not interrupted_by_user:
-                continue  # 继续下一次迭代
-            else:
-                break  # 用户打断或者遍历完所有节点，退出循环
+            if stop_event.is_set():
+                interrupted_by_user = True
+                print("Interrupted by user!")
+                break  # 用户打断，退出循环
     except KeyboardInterrupt:
         interrupted_by_user = True
     finally:
@@ -111,7 +111,6 @@ def randomWalk(delay=1):
             file.write(result)
 
     return result
-
 
 def queryBridgeWords(word1, word2, flag=True): # False表示只返回桥接词不输出提示语句
     word3 = []
@@ -242,11 +241,19 @@ def generateNewText(input_text):
 # 修正后的Dijkstra算法，生成最短路径图，该图上从word1到word2的所有路径都是最短路路径
 def calcShortestPath(word1, word2):
     if not directed_graph.has_node(word1) and not directed_graph.has_node(word2):
-        return f"\"{word1}\" and \"{word2}\" not in the graph!"
+        random_node1 = random.choice(list(directed_graph.nodes))
+        random_node2 = random.choice(list(directed_graph.nodes))
+        word1 = random_node1
+        word2 = random_node2
+        print(f"Both nodes not in the graph. Using random node: \"{random_node}\"")
     elif not directed_graph.has_node(word1):
-        return f"\"{word1}\" not in the graph!"
+        random_node = random.choice(list(directed_graph.nodes))
+        word1 = random_node
+        print(f"\"{word1}\" not in the graph. Using random node: \"{random_node}\"")
     elif not directed_graph.has_node(word2):
-        return f"\"{word2}\" not in the graph!"
+        random_node = random.choice(list(directed_graph.nodes))
+        word2 = random_node
+        print(f"\"{word2}\" not in the graph. Using random node: \"{random_node}\"")
     
     # Step.1 初始化
     distances = {node: float('inf') for node in directed_graph}
