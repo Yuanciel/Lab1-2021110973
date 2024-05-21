@@ -218,8 +218,6 @@ if __name__ == "__main__":
 
         if choice == "1":
             visualize_graph()
-#            for edge in directed_graph.edges(data=True):
-#                print(edge)
 
         elif choice == "2":
             word1 = input("Enter word1: ")
