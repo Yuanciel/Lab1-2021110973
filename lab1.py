@@ -3,7 +3,9 @@ import re
 import networkx as nx
 import matplotlib.pyplot as plt
 import heapq
-directed_graph = nx.DiGraph()
+from graphviz import Digraph
+import pydot
+directed_graph = nx.MultiDiGraph()
 lastone = None
 random = random.Random()
 
@@ -19,9 +21,11 @@ def showDirectedGraph(filename):
         with open(filename, 'r') as file:
             for line in file:
                 words = re.findall(r'\b[A-Za-z]\w*\b', line)
+                # 将所有单词转换为小写
+                words = [word.lower() for word in words]
                 for word in words:
                     add_node_if_not_exists(word)
-                    if last_one and last_one != word:
+                    if last_one:        
                         add_edge_with_weight(last_one, word)
                     last_one = word
     except FileNotFoundError:
@@ -36,7 +40,7 @@ def add_edge_with_weight(from_node, to_node):
         if directed_graph.has_edge(from_node, to_node):
             # Increment edge weight by 1 if the edge already exists
             directed_graph[from_node][to_node]['weight'] += 1
-            print(directed_graph[from_node][to_node]['weight'])  #打印边权值的 测试用的、
+            #print(directed_graph[from_node][to_node]['weight'])  #打印边权值的 测试用的
 
         else:
             # Add edge with weight 1 if it doesn't exist
@@ -74,79 +78,45 @@ def randomWalk():
 
     return result
 
-def visualize_graph():
-    pos = nx.kamada_kawai_layout(directed_graph)
-    nx.draw(directed_graph, pos, with_labels=True, node_size=800, node_color="skyblue", font_size=10, font_weight="bold",
-            arrows=True, arrowsize=10, edge_color="gray", width=1.5, connectionstyle='arc3, rad=0.2')
-    plt.show()
-
-
-'''def queryBridgeWords(word1, word2):
+def queryBridgeWords(word1, word2, flag=True): # False表示只返回桥接词不输出提示语句
+    word3 = []
+    # 判断word1和word2是否在图中
+    if flag:
+        if not directed_graph.has_node(word1) and not directed_graph.has_node(word2):
+            print(f"No \"{word1}\" and \"{word2}\" in the graph!")
+        elif not directed_graph.has_node(word1):
+            print(f"No \"{word1}\" in the graph!")
+        elif not directed_graph.has_node(word2):
+            print(f"No \"{word2}\" in the graph!")
     if not directed_graph.has_node(word1) or not directed_graph.has_node(word2):
-        return "No word1 or word2 in the graph!"
-    visited = set()
-    bridges = []
-
-    def dfs(node, target, path):
-        if node == target:
-            bridges.extend(path[:-1])  # 添加完整路径
-            return True
-
-        visited.add(node)
-        for neighbor in directed_graph.neighbors(node):
-            if neighbor not in visited and neighbor != word1:
-                if dfs(neighbor, target, path + [neighbor]): #这里因为要判断是不是找到了word2所以把word2也加进去了，所以path不该输出最后一个元素
-                    return True
-
-    dfs(word1, word2, [])
-    visited.clear()  # 清空访问记录，以便下一次查询
-
-    if not bridges:
-        return f"No bridge words from {word1} to {word2}!"
-    else:
-        return f"The bridge words from {word1} to {word2} are: {', '.join(bridges)}"
-'''
-def queryBridgeWords(word1, word2):
-    if not directed_graph.has_node(word1) or not directed_graph.has_node(word2):
-        return "No word1 or word2 in the graph!"
-
-    visited = set()
-    bridges = []
-
-    def dfs(node, target, path):
-        if node == target:
-            bridges.extend(path[:-1])  # 不包含最后一个节点
-            return True
-
-        visited.add(node)
-        for neighbor in directed_graph.neighbors(node):
-            if neighbor not in visited and neighbor != word1:
-                if dfs(neighbor, target, path + [neighbor]):
-                    return True
-
-    dfs(word1, word2, [])
-    visited.clear()
-
-    if not bridges:
-        return f"No bridge words from {word1} to {word2}!"
-    else:
-        return f"The bridge words from {word1} to {word2} are: {', '.join(bridges)}"
+        return word3
+    # 用word3记录word1和word2的桥接词
+    # 遍历word1的邻居，再遍历word1的邻居的邻居，判断是否有word2的邻居
+    for neighbor in directed_graph.neighbors(word1):
+        for neighbor2 in directed_graph.neighbors(neighbor):
+            if neighbor2 == word2:
+                word3.append(neighbor)
+    if flag:
+        if not word3:
+            print(f"No bridge words from \"{word1}\" to \"{word2}\"!")
+        else:
+            print(f"The bridge words from \"{word1}\" to \"{word2}\" are: {', '.join(word3)}")
+    return word3
 
 def generateNewText(input_text):
     new_text = []
     words = input_text.lower().split()
+    # print(words)
     for i in range(len(words) - 1):
         word1 = words[i]
         word2 = words[i + 1]
         new_text.append(word1)
-
         if directed_graph.has_node(word1) and directed_graph.has_node(word2):
-            bridge_word = queryBridgeWords(word1, word2) #查询是否有桥接词
-            if bridge_word:
-                new_text.append(bridge_word)
-
+            bridge_word = queryBridgeWords(word1, word2, False) #查询是否有桥接词
+            if bridge_word: 
+                random_num = random.randint(0, len(bridge_word)-1)
+                new_text.append(bridge_word[random_num])
     new_text.append(words[-1])
-
     return ' '.join(new_text)
 
 def calcShortestPath(word1, word2):
@@ -183,22 +153,12 @@ def calcShortestPath(word1, word2):
 
 
 def visualize_graph():
-    pos = nx.spring_layout(directed_graph, seed=42)
-    edge_labels = {(u, v): directed_graph.get_edge_data(u, v)['weight'] for u, v in directed_graph.edges()}
-    nx.draw(directed_graph, pos, with_labels=True, node_size=800, node_color="skyblue", font_size=10,
-            font_weight="bold", arrows=True, arrowsize=10, edge_color="gray", width=1.5,
-            connectionstyle='arc3, rad=0.2')
-
-    # Adjusting edge label positions
-    pos_higher = {}
-    for k, v in pos.items():
-        pos_higher[k] = (v[0], v[1] + 0.08)  # Increase the y-coordinate slightly for better label visibility
-
-    nx.draw_networkx_edge_labels(directed_graph, pos_higher, edge_labels=edge_labels, font_color='red', font_size=8)
-    plt.show()
-
-
-
+    PG = nx.nx_pydot.to_pydot(directed_graph)
+    # 将原图中的边权值加入PG中，PG是Graphviz的图对象
+    for edge in PG.get_edges():
+        edge_label = str(directed_graph[edge.get_source()][edge.get_destination()]['weight'])
+        edge.set_label(edge_label)
+    PG.write_png('graph.png')
 
 
 if __name__ == "__main__":
@@ -218,14 +178,13 @@ if __name__ == "__main__":
 
         if choice == "1":
             visualize_graph()
-#            for edge in directed_graph.edges(data=True):
-#                print(edge)
+            #for edge in directed_graph.edges(data=True):
+                #print(edge)
 
         elif choice == "2":
             word1 = input("Enter word1: ")
             word2 = input("Enter word2: ")
-            result = queryBridgeWords(word1, word2)
-            print(result)
+            queryBridgeWords(word1, word2)
         elif choice == "3":
             input_text = input("Enter new text: ")
             new_text = generateNewText(input_text)
