@@ -12,6 +12,7 @@ import re
 import networkx as nx
 import threading
 import time
+from PIL import Image
 
 directed_graph = nx.DiGraph()
 last_one = None  # Change variable name to follow PEP8 naming conventions
@@ -155,7 +156,7 @@ def generateNewText(input_text):
     return ' '.join(new_text)
 
 
-def calcShortestPath(word1, word2): # 计算word1到word2的最短路径
+"""def calcShortestPath(word1, word2): # 计算word1到word2的最短路径，使用Dijkstra算法
     if not directed_graph.has_node(word1) or not directed_graph.has_node(word2):
         return "Word1 or Word2 not in the graph!"
 
@@ -227,9 +228,128 @@ def calcShortestPath(word1, word2): # 计算word1到word2的最短路径
             node.set_fontcolor('red')
     # 保存图片
     PGMin.write_png(f'minPath_{word1}_{word2}.png')
+    # 展示图片
+    image_path = f'minPath_{word1}_{word2}.png'
+    img = Image.open(image_path)
+    plt.imshow(img)
+    plt.axis('off') # 关掉坐标轴为 off
+    plt.show()
     # 输出最短路径
     return f"Shortest path: {' -> '.join(path)}, Length: {distances[word2]}"
+"""
 
+
+# 修正后的Dijkstra算法，生成最短路径图，该图上从word1到word2的所有路径都是最短路路径
+def calcShortestPath(word1, word2):
+    if not directed_graph.has_node(word1) and not directed_graph.has_node(word2):
+        return f"\"{word1}\" and \"{word2}\" not in the graph!"
+    elif not directed_graph.has_node(word1):
+        return f"\"{word1}\" not in the graph!"
+    elif not directed_graph.has_node(word2):
+        return f"\"{word2}\" not in the graph!"
+    
+    # Step.1 初始化
+    distances = {node: float('inf') for node in directed_graph}
+    distances[word1] = 0
+    miu = {}
+    for node1 in directed_graph:
+        for node2 in directed_graph:
+            miu[(node1, node2)] = 0
+    R = set()
+    R.add(word1)
+    S = set()
+    # Step.2 y是current_node，x是neighbor
+    while len(S) != len(directed_graph):
+        min = float('inf')
+        for i in R:
+            if min > distances[i]:
+                min = distances[i]
+                current_node = i
+        if len(R) == 0:
+            return f"There is no path from \"{word1}\" to \"{word2}\"."
+        R.remove(current_node)
+        S.add(current_node)
+        for neighbor, weight in directed_graph[current_node].items():
+            if neighbor in S:
+                continue
+            else:
+                R.add(neighbor)
+            # Step3
+            if distances[current_node] + weight['weight'] < distances[neighbor]:
+                distances[neighbor] = distances[current_node] + weight['weight']
+                miu[(current_node, neighbor)] = 1
+                for node1 in directed_graph:
+                    if node1 != current_node:
+                        miu[((node1, neighbor))] = 0
+            if distances[current_node] + weight['weight'] == distances[neighbor]:
+                miu[(current_node, neighbor)] = 1
+    # Step4
+    minG = nx.DiGraph() # 最短路径图
+    for node in directed_graph:
+        if not minG.has_node(node):
+            minG.add_node(node)
+    for node1 in minG:
+        for node2 in minG:
+            if miu[(node1, node2)] == 1:
+                minG.add_edge(node1, node2, weight=directed_graph[node1][node2]['weight'])
+    # Step5
+    PGMin = nx.nx_pydot.to_pydot(minG)
+    # 将原图中的边权值加入PG中，PG是Graphviz的图对象
+    for edge in PGMin.get_edges():
+        edge_label = str(minG[edge.get_source()][edge.get_destination()]['weight'])
+        edge.set_label(edge_label)
+    PGMin.write_png('mingraph.png')
+    # 展示最短路径图
+    # img = Image.open(os.path.join('images', '2007_000648' + '.jpg'))
+    # img = Image.open('mingraph.png')
+    # plt.imshow(img)
+    # plt.axis('off') # 关掉坐标轴为 off
+    # plt.show()
+    
+    # 利用DFS求minG上从word1到word2的所有路径
+    def dfs(graph, start, end, path, paths):
+        path = path + [start]
+        if start == end:
+            paths.append(path)
+        for node, weight in graph[start].items():
+            if node not in path:
+                dfs(graph, node, end, path, paths)
+    paths = []
+    dfs(minG, word1, word2, [], paths)
+    # 输出最短路径
+    n = 1
+    for path in paths:
+        PGMinpath = nx.nx_pydot.to_pydot(directed_graph)
+        for edge in PGMinpath.get_edges():
+            edge_label = str(directed_graph[edge.get_source()][edge.get_destination()]['weight'])
+            edge.set_label(edge_label)
+        for i in range(len(path)-1):
+            # 将PGMin中的结点I颜色设置为红色
+            for node in PGMinpath.get_nodes():
+                if node.get_name() == path[i]:
+                    node.set_color('red')
+                    node.set_fontcolor('red')
+            # 将PGMin中的边I->J颜色设置为红色
+            for edge in PGMinpath.get_edges():
+                if edge.get_source() == path[i] and edge.get_destination() == path[i+1]:
+                    edge.set_color('red')
+                    edge.set_fontcolor('red')
+        for node in PGMinpath.get_nodes():
+            if node.get_name() == path[len(path)-1]:
+                node.set_color('red')
+                node.set_fontcolor('red')
+        # 保存图片
+        PGMinpath.write_png(f'minPath_{word1}_{word2}_{n}.png')
+        # 展示图片
+        image_path = f'minPath_{word1}_{word2}_{n}.png'
+        img = Image.open(image_path)
+        plt.imshow(img)
+        plt.axis('off') # 关掉坐标轴为 off
+        plt.show()
+        n += 1
+    if distances[word2] == float('inf'):
+        return(f"There is no path from \"{word1}\" to \"{word2}\".")
+    return(f"There are {len(paths)} shortest paths from \"{word1}\" to \"{word2}\". Their lengths are: {distances[word2]}.")
 
 def visualize_graph():
     PG = nx.nx_pydot.to_pydot(directed_graph)
@@ -238,12 +358,17 @@ def visualize_graph():
         edge_label = str(directed_graph[edge.get_source()][edge.get_destination()]['weight'])
         edge.set_label(edge_label)
     PG.write_png('graph.png')
+    # 展示图片
+    # img = Image.open(os.path.join('images', '2007_000648' + '.jpg'))
+    img = Image.open('graph.png')
+    plt.imshow(img)
+    plt.axis('off') # 关掉坐标轴为 off
+    plt.show()
 
 
 if __name__ == "__main__":
     filename = input("Enter the input file name: ")
     showDirectedGraph(filename)
-
     while True:
         print("\nChoose an option:")
         print("1. Show Directed Graph")
@@ -257,9 +382,6 @@ if __name__ == "__main__":
 
         if choice == "1":
             visualize_graph()
-            #for edge in directed_graph.edges(data=True):
-                #print(edge)
-
         elif choice == "2":
             word1 = input("Enter word1: ")
             word2 = input("Enter word2: ")
