@@ -16,10 +16,11 @@ from PIL import Image
 
 directed_graph = nx.DiGraph()
 last_one = None  # Change variable name to follow PEP8 naming conventions
-
+flag = True
 
 def showDirectedGraph(filename):
     global last_one
+    global flag
     try:
         with open(filename, 'r') as file:
             for line in file:
@@ -31,6 +32,7 @@ def showDirectedGraph(filename):
                     if last_one:        
                         add_edge_with_weight(last_one, word)
                     last_one = word
+        flag = False
     except FileNotFoundError:
         print("File not found!")
 
@@ -155,87 +157,87 @@ def generateNewText(input_text):
     return ' '.join(new_text)
 
 
-"""def calcShortestPath(word1, word2): # 计算word1到word2的最短路径，使用Dijkstra算法
-    if not directed_graph.has_node(word1) or not directed_graph.has_node(word2):
-        return "Word1 or Word2 not in the graph!"
+# def calcShortestPath(word1, word2): # 计算word1到word2的最短路径，使用Dijkstra算法
+#     if not directed_graph.has_node(word1) or not directed_graph.has_node(word2):
+#         return "Word1 or Word2 not in the graph!"
 
-    # Dijkstra算法寻找从word1到word2的最短路径
-    distances = {node: float('inf') for node in directed_graph}
-    distances[word1] = 0
-    previous_nodes = {node: word1 for node in directed_graph}
-    flag = {node: False for node in directed_graph}  # 标记是否已经加入顶点集
-    # 初始化distance矩阵
-    for neighbor, weight in directed_graph[word1].items():
-        distances[neighbor] = weight['weight']
-        previous_nodes[neighbor] = word1
-    distances[word1] = 0
-    flag[word1] = True
-    # 寻找distance矩阵中最小值
-    for j in range(len(directed_graph)-1): 
-        min = float('inf')
-        current_node = None
-        for i in distances:
-            if flag[i]:
-                continue
-            else:
-                if distances[i] < min:
-                    min = distances[i]
-                    current_node = i
-        flag[current_node] = True
-        # 更新distance矩阵和previous_nodes矩阵
-        for i in distances:
-            if flag[i]:
-                continue
-            else:
-                if directed_graph.has_edge(current_node, i):
-                    distance = min + directed_graph[current_node][i]['weight']
-                    if distance < distances[i]:
-                        distances[i] = distance
-                        previous_nodes[i] = current_node
-                else:
-                    continue
-    # print(distances)
-    # print(previous_nodes)
-    # 回溯路径
-    path = []
-    current = word2
-    # while current in previous_nodes:
-    while current != word1:
-        path.insert(0, current)
-        current = previous_nodes[current]
-    path.insert(0, word1)
+#     # Dijkstra算法寻找从word1到word2的最短路径
+#     distances = {node: float('inf') for node in directed_graph}
+#     distances[word1] = 0
+#     previous_nodes = {node: word1 for node in directed_graph}
+#     flag = {node: False for node in directed_graph}  # 标记是否已经加入顶点集
+#     # 初始化distance矩阵
+#     for neighbor, weight in directed_graph[word1].items():
+#         distances[neighbor] = weight['weight']
+#         previous_nodes[neighbor] = word1
+#     distances[word1] = 0
+#     flag[word1] = True
+#     # 寻找distance矩阵中最小值
+#     for j in range(len(directed_graph)-1): 
+#         min = float('inf')
+#         current_node = None
+#         for i in distances:
+#             if flag[i]:
+#                 continue
+#             else:
+#                 if distances[i] < min:
+#                     min = distances[i]
+#                     current_node = i
+#         flag[current_node] = True
+#         # 更新distance矩阵和previous_nodes矩阵
+#         for i in distances:
+#             if flag[i]:
+#                 continue
+#             else:
+#                 if directed_graph.has_edge(current_node, i):
+#                     distance = min + directed_graph[current_node][i]['weight']
+#                     if distance < distances[i]:
+#                         distances[i] = distance
+#                         previous_nodes[i] = current_node
+#                 else:
+#                     continue
+#     # print(distances)
+#     # print(previous_nodes)
+#     # 回溯路径
+#     path = []
+#     current = word2
+#     # while current in previous_nodes:
+#     while current != word1:
+#         path.insert(0, current)
+#         current = previous_nodes[current]
+#     path.insert(0, word1)
 
-    # 在图上以特殊形式标注最短路径，路过的顶点和边用红色标注
-    PGMin = nx.nx_pydot.to_pydot(directed_graph)
-    for edge in PGMin.get_edges():
-        edge_label = str(directed_graph[edge.get_source()][edge.get_destination()]['weight'])
-        edge.set_label(edge_label)
-    for i in range(len(path)-1):
-        # 将PGMin中的结点I颜色设置为红色
-        for node in PGMin.get_nodes():
-            if node.get_name() == path[i]:
-                node.set_color('red')
-                node.set_fontcolor('red')
-        # 将PGMin中的边I->J颜色设置为红色
-        for edge in PGMin.get_edges():
-            if edge.get_source() == path[i] and edge.get_destination() == path[i+1]:
-                edge.set_color('red')
-                edge.set_fontcolor('red')
-    for node in PGMin.get_nodes():
-        if node.get_name() == path[len(path)-1]:
-            node.set_color('red')
-            node.set_fontcolor('red')
-    # 保存图片
-    PGMin.write_png(f'minPath_{word1}_{word2}.png')
-    # 展示图片
-    image_path = f'minPath_{word1}_{word2}.png'
-    img = Image.open(image_path)
-    plt.imshow(img)
-    plt.axis('off') # 关掉坐标轴为 off
-    plt.show()
-    # 输出最短路径
-    return f"Shortest path: {' -> '.join(path)}, Length: {distances[word2]}"
-"""
+#     # 在图上以特殊形式标注最短路径，路过的顶点和边用红色标注
+#     PGMin = nx.nx_pydot.to_pydot(directed_graph)
+#     for edge in PGMin.get_edges():
+#         edge_label = str(directed_graph[edge.get_source()][edge.get_destination()]['weight'])
+#         edge.set_label(edge_label)
+#     for i in range(len(path)-1):
+#         # 将PGMin中的结点I颜色设置为红色
+#         for node in PGMin.get_nodes():
+#             if node.get_name() == path[i]:
+#                 node.set_color('red')
+#                 node.set_fontcolor('red')
+#         # 将PGMin中的边I->J颜色设置为红色
+#         for edge in PGMin.get_edges():
+#             if edge.get_source() == path[i] and edge.get_destination() == path[i+1]:
+#                 edge.set_color('red')
+#                 edge.set_fontcolor('red')
+#     for node in PGMin.get_nodes():
+#         if node.get_name() == path[len(path)-1]:
+#             node.set_color('red')
+#             node.set_fontcolor('red')
+#     # 保存图片
+#     PGMin.write_png(f'minPath_{word1}_{word2}.png')
+#     # 展示图片
+#     image_path = f'minPath_{word1}_{word2}.png'
+#     img = Image.open(image_path)
+#     plt.imshow(img)
+#     plt.axis('off') # 关掉坐标轴为 off
+#     plt.show()
+#     # 输出最短路径
+#     return f"Shortest path: {' -> '.join(path)}, Length: {distances[word2]}"
+
 
 
 # 修正后的Dijkstra算法，生成最短路径图，该图上从word1到word2的所有路径都是最短路路径
@@ -273,7 +275,7 @@ def calcShortestPath(word1, word2):
                 min = distances[i]
                 current_node = i
         if len(R) == 0:
-            return f"There is no path from \"{word1}\" to \"{word2}\"."
+            break
         R.remove(current_node)
         S.add(current_node)
         for neighbor, weight in directed_graph[current_node].items():
@@ -374,8 +376,10 @@ def visualize_graph():
 
 
 if __name__ == "__main__":
-    filename = input("Enter the input file name: ")
-    showDirectedGraph(filename)
+    while flag:
+        filename = input("Enter the input file name: ")
+        showDirectedGraph(filename)
+        
     while True:
         print("\nChoose an option:")
         print("1. Show Directed Graph")
